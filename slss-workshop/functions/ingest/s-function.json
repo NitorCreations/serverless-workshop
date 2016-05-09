@@ -1,0 +1,42 @@
+{
+  "name": "ingest",
+  "runtime": "nodejs4.3",
+  "description": "Serverless Lambda function for project: slss-workshop",
+  "customName": false,
+  "customRole": false,
+  "handler": "ingest/handler.handler",
+  "timeout": 180,
+  "memorySize": 1024,
+  "authorizer": {},
+  "custom": {
+    "excludePatterns": []
+  },
+  "endpoints": [],
+  "events": [
+    {
+      "name": "s3datacreated",
+      "type": "s3",
+      "config": {
+        "bucket": "test-tax-bucket",
+        "bucketEvents": [
+          "s3:ObjectCreated:*"
+        ],
+        "filterRules": [
+          {
+            "name": "suffix",
+            "value": ".csv"
+          }
+        ]
+      }
+    }
+  ],
+  "environment": {
+    "SERVERLESS_PROJECT": "${project}",
+    "SERVERLESS_STAGE": "${stage}",
+    "SERVERLESS_REGION": "${region}"
+  },
+  "vpc": {
+    "securityGroupIds": [],
+    "subnetIds": []
+  }
+}
