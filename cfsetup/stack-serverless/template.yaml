@@ -80,7 +80,11 @@ Resources:
   resElasticSearch:
     Type: AWS::Elasticsearch::Domain
 Outputs:
-  Bucket:
+  ESDomainEndpoint:
     Description: 'ElasticSearch endpoint address'
     Value:
       'Fn::GetAtt': ['resElasticSearch', 'DomainEndpoint']
+  IamRoleArnLambda:
+    Description: "ARN of the lambda IAM role"
+    Value:
+      "Fn::GetAtt": ["resLambdaRole", "Arn"]
