@@ -19,7 +19,7 @@ function listTaxData(bucket, prefix, context) {
     } else {
       console.log(data);
       filesTotal = data.Contents.length;
-      data.Contents.foreach(function(datafile) {
+      data.Contents.forEach(function(datafile) {
         parseTaxDataFromS3ToES(data.Name, datafile.Key, context);
       });
     }
