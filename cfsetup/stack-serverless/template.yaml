@@ -39,11 +39,16 @@ Resources:
                 Action:
                   - es:*
                 Resource: '*'
-    #          - Effect: Allow
-    #            Action:
-    #              - s3:GetObject
-    #            Resource:
-    #              - 'Fn::Join': ['', ['arn:aws:s3:::', {Ref: 'resS3Bucket'}, '/*']]
+              - Effect: Allow
+                Action:
+                 - s3:GetObject
+                Resource:
+                 - 'Fn::Join': ['', ['arn:aws:s3:::nitor-serverless-workshop/*']]
+              - Effect: Allow
+                Action:
+                 - s3:ListBucket
+                Resource:
+                 - 'Fn::Join': ['', ['arn:aws:s3:::nitor-serverless-workshop']]
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
