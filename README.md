@@ -1,1 +1,1 @@
-Morgen, morgen, nur nicht heute, sagen alle faulen Leute.
+Serverless workshop stuff here.

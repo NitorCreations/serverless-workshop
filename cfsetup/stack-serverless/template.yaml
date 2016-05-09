@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Serverless workshop
-#Parameters:
-#  paramDummy:
-#    Description: Description
-#    Type: String
-#    Default: 42
+Parameters:
+  paramDummy:
+    Description: Description
+    Type: Number
+    Default: 42
 Resources:
 #  resS3Bucket:
 #    Type: AWS::S3::Bucket
@@ -21,44 +21,46 @@ Resources:
 #          Function: {Ref: resIngestLambda}
   resLambdaRole:
     Type: AWS::IAM::Role
-    AssumeRolePolicyDocument:
-      Version: '2012-10-17'
-      Statement:
-      - Effect: Allow
-        Principal: {Service: lambda.amazonaws.com}
-        Action: sts:AssumeRole
-    Path: /
-    Policies:
-      - Version: '2012-10-17'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
         - Effect: Allow
+          Principal: {Service: lambda.amazonaws.com}
           Action:
-          - es:*
-          Resource: '*'
-      - Version: '2012-10-17'
-        Statement:
-#          - Effect: Allow
-#            Action:
-#              - s3:GetObject
-#            Resource:
-#              - 'Fn::Join': ['', ['arn:aws:s3:::', {Ref: 'resS3Bucket'}, '/*']]
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource:
-              - "arn:aws:logs:*:*:*"
+            - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: LambdaRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - es:*
+                Resource: '*'
+    #          - Effect: Allow
+    #            Action:
+    #              - s3:GetObject
+    #            Resource:
+    #              - 'Fn::Join': ['', ['arn:aws:s3:::', {Ref: 'resS3Bucket'}, '/*']]
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - "arn:aws:logs:*:*:*"
   resIngestLambda:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: nitor_serverless_workshop
+        S3Bucket: nitor-serverless-workshop
         S3Key: ingestlambda/ingestlambda.zip
       Description: Ingests CSV to Elasticsearch
-      FunctionName: csvToES
+      FunctionName: csvToES3
       Handler: ingest.handler
-      Role: {Ref: resLambdaRole}
+      Role: {"Fn::GetAtt" : ["resLambdaRole", "Arn"] }
       Runtime: nodejs4.3
       Timeout: 120
   resExecuteIngestLambda:
@@ -67,6 +69,8 @@ Resources:
       ServiceToken: { "Fn::GetAtt" : ["resIngestLambda", "Arn"] }
       ESEndpoint: { "Fn::GetAtt" : ["resElasticSearch", "DomainEndpoint"] }
       Region: { "Ref" : "AWS::Region" }
+      Bucket: nitor-serverless-workshop
+      Prefix: /taxdata/
   resElasticSearch:
     Type: AWS::Elasticsearch::Domain
 Outputs:

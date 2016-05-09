@@ -8,6 +8,8 @@ var esDomain = {
 };
 //var endpoint =  new AWS.Endpoint(esDomain.endpoint);
 var s3 = new AWS.S3();
+var docsTotal = 0;
+var docsPosted = 0;
 
 function listTaxData(bucket, prefix, context) {
   s3.listObjectsV2({Bucket: bucket, Prefix: prefix}, function(err, data) {
@@ -16,6 +18,7 @@ function listTaxData(bucket, prefix, context) {
       context.fail();
     } else {
       console.log(data);
+      filesTotal = data.Contents.length;
       data.Contents.foreach(function(datafile) {
         parseTaxDataFromS3ToES(data.Name, datafile.Key, context);
       });
@@ -35,6 +38,7 @@ function parseTaxDataFromS3ToES(bucket, key, context) {
       lines.forEach(function(line) {
         var lineItems = line.split(';');
         var esDocument = {};
+        ++docsTotal;
         lineItems.forEach(function(item, index) {
           switch(index) {
             case 0:
@@ -79,7 +83,6 @@ function parseTaxDataFromS3ToES(bucket, key, context) {
   });
 }
 
-
 /*
  * The AWS credentials are picked up from the environment.
  * They belong to the IAM role assigned to the Lambda function.
@@ -96,7 +99,7 @@ function postDocumentToES(doc, context) {
     var req = new AWS.HttpRequest(endpoint);
 
     req.method = 'POST';
-    req.path = '/' + esDomain.index + '/' + esDomain.doctype);
+    req.path = '/' + esDomain.index + '/' + esDomain.doctype;
     req.region = esDomain.region;
     req.body = doc;
     req.headers['presigned-expires'] = false;
@@ -115,7 +118,12 @@ function postDocumentToES(doc, context) {
         });
         httpResp.on('end', function (chunk) {
           console.log("added document to ES");
-            }
+          ++docsPosted;
+          if (docsTotal === docsPosted) {
+            console.log("All docs posted: " + docsPosted);
+            var responseData = {};
+            RESPONSE.send(responseEvent, context, RESPONSE.SUCCESS, responseData);
+          }
         });
     }, function(err) {
         console.log('Error: ' + err);
@@ -129,5 +137,6 @@ exports.handler = function(event, context) {
     //from cloudformation custom resource properties:
     endpoint = new AWS.Endpoint(event.ResourceProperties.ESEndpoint);
     esDomain.region = event.ResourceProperties.Region;
+    responseEvent = event;
     listTaxData(event.ResourceProperties.Bucket, event.ResourceProperties.Prefix, context);
 }
