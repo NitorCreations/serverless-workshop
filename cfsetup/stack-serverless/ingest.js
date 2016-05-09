@@ -2,11 +2,9 @@ var AWS = require('aws-sdk');
 var RESPONSE = require('cfn-response');
 
 var esDomain = {
-    region: 'eu-west-1',
     index: 'taxdata',
     doctype: 'taxdata'
 };
-//var endpoint =  new AWS.Endpoint(esDomain.endpoint);
 var s3 = new AWS.S3();
 var docsTotal = 0;
 var docsPosted = 0;
@@ -36,7 +34,7 @@ function parseTaxDataFromS3ToES(bucket, key, context) {
     } else {
       console.log(data);
       var lines = data.Body.toString('utf8').split('\n');
-      lines.splice(0, 1);
+      lines.splice(0, 1); //skip header line
       lines.forEach(function(line) {
         var lineItems = line.split(';');
         var esDocument = {};
@@ -54,31 +52,32 @@ function parseTaxDataFromS3ToES(bucket, key, context) {
               break;
             case 3:
               if (item.indexOf(' ') === 3) {
-                esDocument.municipalityNumber = item.substring(0, 4);
+                esDocument.municipalityNumber = item.substring(0, 3);
                 esDocument.municipalityName = item.substring(4);
               } else {
                 console.log("municipality parsing fail: " + item);
               }
               break;
             case 4:
-              esDocument.taxableIncome = item;
+              esDocument.taxableIncome = parseFloat(item.replace(",", "."));
               break;
             case 5:
-              esDocument.taxDue = item;
+              esDocument.taxDue = parseFloat(item.replace(",", "."));
               break;
             case 6:
-              esDocument.advanceTax = item;
+              esDocument.advanceTax = parseFloat(item.replace(",", "."));
               break;
             case 7:
-              esDocument.taxRefund = item;
+              esDocument.taxRefund = parseFloat(item.replace(",", "."));
               break;
             case 8:
-              esDocument.residualTax = item;
+              esDocument.residualTax = parseFloat(item.replace("\r", "").replace(",", "."));
               break;
             default:
               console.log("unexpected line item " + index + ": " + item);
           }
         });
+        //console.log(esDocument);
         postDocumentToES(esDocument, context);
       });
     }
@@ -98,49 +97,36 @@ var creds = new AWS.EnvironmentCredentials('AWS');
  * Add the given document to the ES domain.
  */
 function postDocumentToES(doc, context) {
-    var req = new AWS.HttpRequest(endpoint);
-
-    req.method = 'POST';
-    req.path = '/' + esDomain.index + '/' + esDomain.doctype;
-    req.region = esDomain.region;
-    req.body = JSON.stringify(doc);
-    req.headers['presigned-expires'] = false;
-    req.headers['Host'] = endpoint.host;
-
-    // Sign the request (Sigv4)
-    var signer = new AWS.Signers.V4(req, 'es');
-    signer.addAuthorization(creds, new Date());
-
-    // Post document to ES
-    var send = new AWS.NodeHttpClient();
-    console.log("posting to ES");
-    send.handleRequest(req, null, function(httpResp) {
-        console.log("httpResp callback");
-        var body = '';
-        httpResp.on('data', function (chunk) {
-            body += chunk;
-        });
-        httpResp.on('end', function (chunk) {
-          console.log("added document to ES");
-          ++docsPosted;
-          if (docsTotal === docsPosted) {
-            console.log("All docs posted: " + docsPosted);
-            var responseData = {};
-            RESPONSE.send(responseEvent, context, RESPONSE.SUCCESS, responseData);
-          }
-        });
-    }, function(err) {
-        console.log('Error: ' + err);
-        context.fail();
-    });
+  es.index({
+    index: esDomain.index,
+    type: esDomain.doctype,
+    body: doc
+  }, function(error, response, status) {
+    if (error) {
+      console.log(error, error.stack);
+    } else {
+      ++docsPosted;
+      if (docsTotal === docsPosted) {
+        console.log("All docs posted: " + docsPosted);
+        var responseData = {};
+        RESPONSE.send(responseEvent, context, RESPONSE.SUCCESS, responseData);
+      }
+    }
+  });
 }
 
 /* Lambda "main": Execution starts here */
 exports.handler = function(event, context) {
     console.log('Received event: ', JSON.stringify(event, null, 2));
-    //from cloudformation custom resource properties:
-    endpoint = new AWS.Endpoint(event.ResourceProperties.ESEndpoint);
-    esDomain.region = event.ResourceProperties.Region;
+    es = require('elasticsearch').Client({
+      host: event.ResourceProperties.ESEndpoint, //from cloudformation custom resource properties
+      //log: 'trace',
+      connectionClass: require('http-aws-es'),
+      amazonES: {
+        region: event.ResourceProperties.Region,
+        credentials: creds
+      }
+    });
     responseEvent = event;
     listTaxData(event.ResourceProperties.Bucket, event.ResourceProperties.Prefix, context);
 }
