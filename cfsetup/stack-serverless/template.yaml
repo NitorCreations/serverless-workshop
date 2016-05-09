@@ -75,7 +75,7 @@ Resources:
       ESEndpoint: { "Fn::GetAtt" : ["resElasticSearch", "DomainEndpoint"] }
       Region: { "Ref" : "AWS::Region" }
       Bucket: nitor-serverless-workshop
-      Prefix: /taxdata/
+      Prefix: taxdata/
   resElasticSearch:
     Type: AWS::Elasticsearch::Domain
 Outputs:

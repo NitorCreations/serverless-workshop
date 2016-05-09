@@ -20,7 +20,9 @@ function listTaxData(bucket, prefix, context) {
       console.log(data);
       filesTotal = data.Contents.length;
       data.Contents.forEach(function(datafile) {
-        parseTaxDataFromS3ToES(data.Name, datafile.Key, context);
+        if (datafile.Size > 0) {
+          parseTaxDataFromS3ToES(data.Name, datafile.Key, context);
+        }
       });
     }
   });
@@ -33,7 +35,7 @@ function parseTaxDataFromS3ToES(bucket, key, context) {
       context.fail();
     } else {
       console.log(data);
-      var lines = data.split('\n');
+      var lines = data.Body.toString('utf8').split('\n');
       lines.splice(0, 1);
       lines.forEach(function(line) {
         var lineItems = line.split(';');
@@ -101,7 +103,7 @@ function postDocumentToES(doc, context) {
     req.method = 'POST';
     req.path = '/' + esDomain.index + '/' + esDomain.doctype;
     req.region = esDomain.region;
-    req.body = doc;
+    req.body = JSON.stringify(doc);
     req.headers['presigned-expires'] = false;
     req.headers['Host'] = endpoint.host;
 
@@ -111,7 +113,9 @@ function postDocumentToES(doc, context) {
 
     // Post document to ES
     var send = new AWS.NodeHttpClient();
+    console.log("posting to ES");
     send.handleRequest(req, null, function(httpResp) {
+        console.log("httpResp callback");
         var body = '';
         httpResp.on('data', function (chunk) {
             body += chunk;
