@@ -1,3 +1,4 @@
 node_modules
 ingestlambda.zip
 aws-utils
+.DS_Store
