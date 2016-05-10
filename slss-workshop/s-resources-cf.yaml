@@ -28,7 +28,7 @@ Resources:
         - Effect: Allow
           Action:
            - s3:GetObject
-          Resource: 'arn:aws:s3:::test-tax-bucket/*'
+          Resource: ['arn:aws:s3:::test-tax-bucket/*', 'arn:aws:s3:::test-tax-bucket-${stage}/*']
         - Effect: Allow
           Action:
            - s3:ListBucket
@@ -36,10 +36,19 @@ Resources:
         - Effect: Allow
           Action: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents']
           Resource: arn:aws:logs:${region}:*:*
+        - Effect: Allow
+          Action: ['cloudformation:describeStacks']
+          Resource: '*'
       Roles:
       - {Ref: IamRoleLambda}
+  resElasticSearch:
+    Type: AWS::Elasticsearch::Domain
 Outputs:
   IamRoleArnLambda:
     Description: ARN of the lambda IAM role
     Value:
       Fn::GetAtt: [IamRoleLambda, Arn]
+  ESDomainEndpoint:
+    Description: 'ElasticSearch endpoint address'
+    Value:
+      'Fn::GetAtt': ['resElasticSearch', 'DomainEndpoint']
