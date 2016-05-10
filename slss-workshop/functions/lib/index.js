@@ -5,7 +5,7 @@ var s3 = new AWS.S3();
 var totLines = 0;
 var numDocsAdded = 0;
 var postsInProgress = 0;
-var CONCURRENT_POSTS_LIMIT = 1000;
+var CONCURRENT_POSTS_LIMIT = 5;
 
 var exports = module.exports = {};
 exports.esDomain = {
@@ -26,12 +26,16 @@ exports.s3LinesToES = function (bucket, key, context, lineStream, recordStream) 
     s3Stream
       .pipe(lineStream)
       .pipe(recordStream)
-      .on('data', function(parsedEntry) {
-        ++postsInProgress;
+      .on('end', function () {
+        console.log("Stream end event");
+        this.postDocumentToES(null, context, recordStream, true);
+      }.bind(this));
+
+    recordStream.on('data', function(parsedEntry) {
         if (postsInProgress >= CONCURRENT_POSTS_LIMIT) {
-          s3Stream.pause();
+          recordStream.pause();
         }
-        this.postDocumentToES(parsedEntry, context, s3Stream);
+        this.postDocumentToES(parsedEntry, context, recordStream, false);
       }.bind(this));
 
     s3Stream.on('error', function() {
@@ -95,47 +99,67 @@ exports.parse = function(line) {
  */
 var creds = new AWS.EnvironmentCredentials('AWS');
 
-exports.postDocumentToES = function(doc, context, s3Stream) {
-  var endpoint =  new AWS.Endpoint(this.esDomain.endpoint);
-  var req = new AWS.HttpRequest(endpoint);
+var esBulkBuffer = [];
 
-  req.method = 'POST';
-  req.path = path.join('/', this.esDomain.index, this.esDomain.doctype);
-  req.region = this.esDomain.region;
-  req.body = doc;
-  req.headers['presigned-expires'] = false;
-  req.headers['Host'] = endpoint.host;
+exports.postDocumentToES = function(doc, context, stream, lastDoc) {
+  if (doc) {
+    esBulkBuffer.push(JSON.parse('{"index": {}}'));
+    esBulkBuffer.push(doc);
+  }
 
-  // Sign the request (Sigv4)
-  var signer = new AWS.Signers.V4(req, 'es');
-  signer.addAuthorization(creds, new Date());
+  if (lastDoc && esBulkBuffer.length === 0) {
+    return;
+  }
 
-  // Post document to ES
-  var send = new AWS.NodeHttpClient();
-  send.handleRequest(req, null, function(httpResp) {
-      var body = '';
-      httpResp.on('data', function (chunk) {
-          body += chunk;
-      });
-      httpResp.on('end', function (chunk) {
-          numDocsAdded ++;
-          if (numDocsAdded % 1000 === 0) {
-            console.log("At " + numDocsAdded + " docs with "
-            + context.getRemainingTimeInMillis() + " millis lambda time left...");
-          }
-          if (numDocsAdded === totLines) {
-              // Mark lambda success.  If not done so, it will be retried.
-              console.log('All ' + numDocsAdded + ' docs added to ES.');
-              context.succeed();
-          }
-          --postsInProgress;
-          if (postsInProgress < CONCURRENT_POSTS_LIMIT) {
-            s3Stream.resume();
-          }
-      });
-  }, function(err) {
-      console.log('Error: ' + err);
-      console.log(numDocsAdded + ' of ' + totLines + ' log records added to ES.');
-      context.fail();
-  });
+  if (esBulkBuffer.length >= 1000 || lastDoc) {
+
+    var endpoint =  new AWS.Endpoint(this.esDomain.endpoint);
+    var req = new AWS.HttpRequest(endpoint);
+    var docsInPost = esBulkBuffer.length / 2;
+
+    req.method = 'POST';
+    req.path = path.join('/', this.esDomain.index, this.esDomain.doctype, '_bulk');
+    req.region = this.esDomain.region;
+    req.body = JSON.stringify(esBulkBuffer);
+    esBulkBuffer = [];
+    req.headers['presigned-expires'] = false;
+    req.headers['Host'] = endpoint.host;
+
+    // Sign the request (Sigv4)
+    var signer = new AWS.Signers.V4(req, 'es');
+    signer.addAuthorization(creds, new Date());
+
+    // Post document to ES
+    var send = new AWS.NodeHttpClient();
+    ++postsInProgress;
+    send.handleRequest(req, null, function(httpResp) {
+        var body = '';
+        httpResp.on('data', function (chunk) {
+            body += chunk;
+        });
+        httpResp.on('end', function (chunk) {
+            console.log(body += chunk);
+            numDocsAdded = numDocsAdded + docsInPost;
+            if (numDocsAdded % 1000 === 0 || lastDoc) {
+              console.log("At " + numDocsAdded + " docs with "
+              + context.getRemainingTimeInMillis() + " millis lambda time left...");
+            }
+            if (numDocsAdded === totLines) {
+                // Mark lambda success.  If not done so, it will be retried.
+                console.log('All ' + numDocsAdded + ' docs added to ES.');
+                context.succeed();
+            }
+            --postsInProgress;
+            if (postsInProgress < CONCURRENT_POSTS_LIMIT) {
+              stream.resume();
+            }
+        });
+    }, function(err) {
+        console.log('Error: ' + err);
+        console.log(numDocsAdded + ' of ' + totLines + ' log records added to ES.');
+        context.fail();
+    });
+
+
+  }
 };
