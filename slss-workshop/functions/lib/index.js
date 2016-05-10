@@ -53,7 +53,7 @@ exports.parse = function(line) {
   lineItems.forEach(function(item, index) {
     switch(index) {
       case 0:
-        esDocument.year = item;
+        esDocument.year = parseInt(item);
         break;
       case 1:
         esDocument.businessId = item;
@@ -70,19 +70,18 @@ exports.parse = function(line) {
         }
         break;
       case 4:
-        esDocument.taxableIncome = parseFloat(item.replace(",", "."));
+        esDocument.taxableIncome = numberize(item);
         break;
       case 5:
-        esDocument.taxDue = parseFloat(item.replace(",", "."));
+        esDocument.taxDue = numberize(item);
         break;
       case 6:
-        esDocument.advanceTax = parseFloat(item.replace(",", "."));
-        break;
+        esDocument.advanceTax = numberize(item);
       case 7:
-        esDocument.taxRefund = parseFloat(item.replace(",", "."));
+        esDocument.taxRefund = numberize(item);
         break;
       case 8:
-        esDocument.residualTax = parseFloat(item.replace("\r", "").replace(",", "."));
+        esDocument.residualTax = numberize(item);
         break;
       default:
         console.log("unexpected line item " + index + ": " + item);
@@ -90,6 +89,11 @@ exports.parse = function(line) {
   });
   return esDocument;
 };
+
+function numberize(value) {
+  return parseFloat(value.replace(",", ".").replace("\r", "")).toFixed(2);
+}
+
 /*
  * The AWS credentials are picked up from the environment.
  * They belong to the IAM role assigned to the Lambda function.
@@ -160,7 +164,6 @@ exports.postDocumentToES = function(doc, context, stream, lastDoc) {
         console.log(numDocsAdded + ' of ' + totLines + ' log records added to ES.');
         context.fail();
     });
-
-
+    
   }
 };
