@@ -1,18 +1,20 @@
 var AWS = require('aws-sdk');
 var path = require('path');
 
-var esDomain = {
-    endpoint: 'search-testmikadomain-o4bu6vt2gg6n6v3sahz4esuia4.eu-west-1.es.amazonaws.com',
+var s3 = new AWS.S3();
+var totLines = 0;
+var numDocsAdded = 0;
+var postsInProgress = 0;
+var CONCURRENT_POSTS_LIMIT = 1000;
+
+var exports = module.exports = {};
+exports.esDomain = {
+    //endpoint: 'search-testmikadomain-o4bu6vt2gg6n6v3sahz4esuia4.eu-west-1.es.amazonaws.com',
     index: 'taxdata',
     doctype: 'taxdata',
     region: 'eu-west-1'
 };
-var endpoint =  new AWS.Endpoint(esDomain.endpoint);
-var s3 = new AWS.S3();
-var totLines = 0;
-var numDocsAdded = 0;
 
-var exports = module.exports = {};
 /*
  * Get the log file from the given S3 bucket and key.  Parse it and add
  * each log record to the ES domain.
@@ -25,7 +27,11 @@ exports.s3LinesToES = function (bucket, key, context, lineStream, recordStream) 
       .pipe(lineStream)
       .pipe(recordStream)
       .on('data', function(parsedEntry) {
-          this.postDocumentToES(parsedEntry, context);
+        ++postsInProgress;
+        if (postsInProgress >= CONCURRENT_POSTS_LIMIT) {
+          s3Stream.pause();
+        }
+        this.postDocumentToES(parsedEntry, context, s3Stream);
       }.bind(this));
 
     s3Stream.on('error', function() {
@@ -89,12 +95,13 @@ exports.parse = function(line) {
  */
 var creds = new AWS.EnvironmentCredentials('AWS');
 
-exports.postDocumentToES = function(doc, context) {
+exports.postDocumentToES = function(doc, context, s3Stream) {
+  var endpoint =  new AWS.Endpoint(this.esDomain.endpoint);
   var req = new AWS.HttpRequest(endpoint);
 
   req.method = 'POST';
-  req.path = path.join('/', esDomain.index, esDomain.doctype);
-  req.region = esDomain.region;
+  req.path = path.join('/', this.esDomain.index, this.esDomain.doctype);
+  req.region = this.esDomain.region;
   req.body = doc;
   req.headers['presigned-expires'] = false;
   req.headers['Host'] = endpoint.host;
@@ -112,10 +119,18 @@ exports.postDocumentToES = function(doc, context) {
       });
       httpResp.on('end', function (chunk) {
           numDocsAdded ++;
+          if (numDocsAdded % 1000 === 0) {
+            console.log("At " + numDocsAdded + " docs with "
+            + context.getRemainingTimeInMillis() + " millis lambda time left...");
+          }
           if (numDocsAdded === totLines) {
               // Mark lambda success.  If not done so, it will be retried.
-              console.log('All ' + numDocsAdded + ' log records added to ES.');
+              console.log('All ' + numDocsAdded + ' docs added to ES.');
               context.succeed();
+          }
+          --postsInProgress;
+          if (postsInProgress < CONCURRENT_POSTS_LIMIT) {
+            s3Stream.resume();
           }
       });
   }, function(err) {

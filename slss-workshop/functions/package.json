@@ -10,6 +10,7 @@
     "url": "git://github.com/"
   },
   "dependencies": {
-    "byline": "^4.2.1"
+    "byline": "^4.2.1",
+    "serverless-helpers-js": "^0.2.0"
   }
 }
