@@ -103,7 +103,7 @@ var esBulkBuffer = [];
 
 exports.postDocumentToES = function(doc, context, stream, lastDoc) {
   if (doc) {
-    esBulkBuffer.push(JSON.parse('{"index": {}}'));
+    esBulkBuffer.push('{"index": {}}');
     esBulkBuffer.push(doc);
   }
 
@@ -111,7 +111,7 @@ exports.postDocumentToES = function(doc, context, stream, lastDoc) {
     return;
   }
 
-  if (esBulkBuffer.length >= 1000 || lastDoc) {
+  if (esBulkBuffer.length >= 500 || lastDoc) {
 
     var endpoint =  new AWS.Endpoint(this.esDomain.endpoint);
     var req = new AWS.HttpRequest(endpoint);
@@ -120,7 +120,9 @@ exports.postDocumentToES = function(doc, context, stream, lastDoc) {
     req.method = 'POST';
     req.path = path.join('/', this.esDomain.index, this.esDomain.doctype, '_bulk');
     req.region = this.esDomain.region;
-    req.body = JSON.stringify(esBulkBuffer);
+    esBulkBuffer.forEach(function(data) {
+        req.body += data + "\n";
+    });
     esBulkBuffer = [];
     req.headers['presigned-expires'] = false;
     req.headers['Host'] = endpoint.host;
@@ -138,7 +140,6 @@ exports.postDocumentToES = function(doc, context, stream, lastDoc) {
             body += chunk;
         });
         httpResp.on('end', function (chunk) {
-            console.log(body += chunk);
             numDocsAdded = numDocsAdded + docsInPost;
             if (numDocsAdded % 1000 === 0 || lastDoc) {
               console.log("At " + numDocsAdded + " docs with "
