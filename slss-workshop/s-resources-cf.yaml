@@ -47,6 +47,8 @@ Resources:
       - {Ref: IamRoleLambda}
   resElasticSearch:
     Type: AWS::Elasticsearch::Domain
+    Properties:
+      DomainName: test-tax-es-${stage}
 Outputs:
   IamRoleArnLambda:
     Description: ARN of the lambda IAM role
