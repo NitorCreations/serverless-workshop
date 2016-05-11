@@ -20,7 +20,6 @@ source /opt/nitor/cloud_init_functions.sh
 source /opt/nitor/tool_installers.sh
 source /opt/nitor/ebs-functions.sh
 source /opt/nitor/aws_tools.sh
-source /opt/nitor/ssh_tools.sh
 
 fail () {
     echo "$@"
@@ -46,9 +45,6 @@ set_timezone
 set_hostname
 
 install_workstation
-
-ssh_install_hostkeys
-ssh_restart_service
 
 aws_ec2_associate_address
 
