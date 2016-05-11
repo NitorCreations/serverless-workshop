@@ -51,8 +51,9 @@ MARKER
     chmod 750 /root/ssh-hostkeys.sh
     /root/ssh-hostkeys.sh
     rm -rf /root/ssh-hostkeys.sh
-    systemctl restart sshd
   fi
+  sed -i 's/^PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+  systemctl restart sshd
   chmod 600 /etc/skel/.aws/credentials
   cat > /etc/skel/.aws/config << MARKER
 [default]
@@ -60,8 +61,8 @@ output = json
 region = $CF_AWS__Region
 MARKER
   chmod 600 /etc/skel/.aws/config
-  for username in teamred teamyellow teamblue teamorange teampurple teamgreen teamamber \
-    teamcrimson teamcyan teamgray teamblack teammaroon teamolive teampink teamteal; do
+  for username in teamred teamyellow teamblue teamorange teampurple teamgreen teamamber teamwhite \
+    teamcrimson teamcyan teamgray teamblack teammaroon teamolive teampink teamteal teambrown; do
       rm -rf /home/$username
       useradd -m $username
       echo -n "$username:"
