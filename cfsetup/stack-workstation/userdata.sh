@@ -69,6 +69,10 @@ MARKER
       dd if=/dev/urandom bs=100 count=1 status=none | tr -cd '[:alnum:]' | cut -c -10
   done > /root/users
   cat /root/users | chpasswd
+  wget -O /tmp/verot_2011.csv https://www.vero.fi/download/Julkiset_nettiin_CSV/%7B934080C4-4EB2-466A-8642-26217CD15B29%7D/7951
+  wget -O /tmp/verot_2012.csv https://www.vero.fi/download/Yhteisojen_tuloverotuksen_julkiset_tiedot_2012_kuntanumerot_005999/%7B236F0CD0-4072-47ED-8A7A-0F2B8C4E9691%7D/8808
+  wget -O /tmp/verot_2013.csv https://www.vero.fi/download/Julkiset_nettiin_CSV__2013/%7B3AD7359B-6888-4168-A78C-545DB20612F3%7D/10029
+  wget -O /tmp/verot_2014.csv https://www.vero.fi/download/Julkiset_nettiin_CSV_2014/%7B6786C0AA-EECE-479F-AF1B-213DC3A91ABD%7D/11209
 }
 
 set_region
