@@ -17,7 +17,7 @@ own Linux/Mac(/Windows?) or use the EC2 instance we'll provide access to.
 
 ## Setting up the Serverless project and your deployment stage
 
-In the directory ```serverless-workshop/slss-workshop```, run [`serverless  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
+In the directory ```serverless-workshop/slss-workshop```, run [`slss  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
 **When prompted for a stage name, use the one provided to you or at least try not to conflict with others.**
 
 This creates an Elasticsearch domain in AWS which takes 10-15 minutes. You can continue with creating your API while this is happening. Come back here when this is done to upload your data.
@@ -30,7 +30,7 @@ First, after the project/stage setup has completed, the ingest lambda function r
 some dependencies to be installed. These can be installed by going into ```functions```
 subdirectory inside the serverless project and running ```npm install```.
 
-Then you can deploy the data ingestion lambda function and S3 event which triggers it: ```serverless dash deploy```.
+Then you can deploy the data ingestion lambda function and S3 event which triggers it: ```slss dash deploy```.
 
 Then upload the tax data to trigger ingestion to Elasticsearch: ```aws s3 cp /tmp/verot_2014.csv s3://test-tax-bucket-yourStageName```
 
@@ -39,6 +39,14 @@ Then upload the tax data to trigger ingestion to Elasticsearch: ```aws s3 cp /tm
 Think of an query you'd like to run against the tax data and implement it! Will it be simple and smooth like **querying companies by their business id or name** or would you like to see **companies paying more than a million euros in tax?**
 
 ### Write the Lambda function
+
+First you create a new function in your serverless project by calling ```slss function create functions/search```
+Select *nodejs4.3* for runtime and *Create Endpoint* as the answer to the next question.
+Your function is now ready to deploy. Your stage will be given a random domain name -
+you can get the url to your search function like this:
+```
+echo https://$(aws apigateway get-rest-apis | jq -r .items[0].id).execute-api.eu-west-1.amazonaws.com/yourStageName/search
+```
 
 ### Configure API Gateway Endpoint
 
