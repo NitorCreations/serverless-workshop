@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  infra network stack
+Parameters:
+  paramVPCCidr:
+    Description: CIDR block for the VPC created
+    Type: String
+    Default: 192.168.168.0/21
+  paramSubnetACidr:
+    Description: CIDR block for subnet A
+    Type: String
+    Default: 192.168.168.0/24
+  paramSubnetBCidr:
+    Description: CIDR block for subnet B
+    Type: String
+    Default: 192.168.169.0/24
+  paramSubnetCCidr:
+    Description: CIDR block for subnet C
+    Type: String
+    Default: 192.168.170.0/24
+  paramInfraName:
+    Description: Default name for various infra elemetns
+    Type: String
+    Default: serverless
+Resources:
+  vpcInfra:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: {Ref: paramVPCCidr}
+      InstanceTenancy: default
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'false'
+      Tags:
+      - {Key: Name, Value: serverless infra}
+  subnetInfraA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: {Ref: paramSubnetACidr}
+      AvailabilityZone:
+        'Fn::Join': ["", [{Ref: 'AWS::Region'}, a]]
+      MapPublicIpOnLaunch: 'true'
+      VpcId: {Ref: vpcInfra}
+      Tags:
+      - {Key: Name, Value: infra-subnet-a}
+  subnetInfraB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: {Ref: paramSubnetBCidr}
+      AvailabilityZone:
+        'Fn::Join': ["", [{Ref: 'AWS::Region'}, b]]
+      MapPublicIpOnLaunch: 'true'
+      VpcId: {Ref: vpcInfra}
+      Tags:
+      - {Key: Name, Value: infra-subnet-b}
+  subnetInfraC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: {Ref: paramSubnetCCidr}
+      AvailabilityZone:
+        'Fn::Join': ["", [{Ref: 'AWS::Region'}, c]]
+      MapPublicIpOnLaunch: 'true'
+      VpcId: {Ref: vpcInfra}
+      Tags:
+      - {Key: Name, Value: infra-subnet-c}
+  igwInfra:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - {Key: Name, Value: infra-internet-gateway}
+  doptInfra:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainName:
+        'Fn::Join': ["", [{Ref: 'AWS::Region'}, ".", {Ref: paramInfraName}, "-compute.internal"]]
+      DomainNameServers: [AmazonProvidedDNS]
+  aclInfra:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: {Ref: vpcInfra}
+  rtbPublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: {Ref: vpcInfra}
+      Tags:
+      - {Key: Name, Value: public-route-table}
+  sgInfra:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for infra subnets
+      VpcId: {Ref: vpcInfra}
+      Tags:
+      - {Key: Name, Value: infra-sg}
+      SecurityGroupEgress: {CidrIp: 0.0.0.0/0, FromPort: -1, IpProtocol: -1, ToPort: -1}
+  sgSSHFromAnywhere:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SSH in from anywhere
+      VpcId: {Ref: vpcInfra}
+      Tags:
+      - {Key: Name, Value: ssh-from-anywhere}
+      SecurityGroupEgress:
+      - {CidrIp: 0.0.0.0/0, FromPort: -1, IpProtocol: -1, ToPort: -1}
+      SecurityGroupIngress:
+      - {IpProtocol: tcp, FromPort: '22', ToPort: '22', CidrIp: 0.0.0.0/0}
+  aclentryAllowAllEgress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: 'true'
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '100'
+      NetworkAclId: {Ref: aclInfra}
+  aclentryAllowAllIngress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: false
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '100'
+      NetworkAclId: {Ref: aclInfra}
+  subnetacl1:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: {Ref: aclInfra}
+      SubnetId: {Ref: subnetInfraA}
+  subnetacl2:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: {Ref: aclInfra}
+      SubnetId: {Ref: subnetInfraB}
+  subnetacl3:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: {Ref: aclInfra}
+      SubnetId: {Ref: subnetInfraC}
+  igwInfraAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: {Ref: vpcInfra}
+      InternetGatewayId: {Ref: igwInfra}
+  subnetroute2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: {Ref: rtbPublic}
+      SubnetId: {Ref: subnetInfraA}
+  subnetroute3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: {Ref: rtbPublic}
+      SubnetId: {Ref: subnetInfraB}
+  subnetroute4:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: {Ref: rtbPublic}
+      SubnetId: {Ref: subnetInfraC}
+  routertbPlubicIGW:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: {Ref: rtbPublic}
+      GatewayId: {Ref: igwInfra}
+    DependsOn: igwInfraAttachment
+  dchpassoc1:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    Properties:
+      VpcId: {Ref: vpcInfra}
+      DhcpOptionsId: {Ref: doptInfra}
+Outputs:
+  subnetInfraA:
+    Description: subnet id
+    Value: {Ref: subnetInfraA}
+  subnetInfraB:
+    Description: subnet id
+    Value: {Ref: subnetInfraB}
+  subnetInfraC:
+    Description: subnet id
+    Value: {Ref: subnetInfraC}
+  VPC:
+    Description: vpc id
+    Value: {Ref: vpcInfra}
+  sgInfra:
+    Description: infra security group id
+    Value: {Ref: sgInfra}
+  sgSSHFromAnywhere:
+    Description: SSH in security group id
+    Value: {Ref: sgSSHFromAnywhere}

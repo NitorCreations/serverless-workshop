@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Serverless Workstation server
+Parameters:
+  paramSubnetInfraA:
+    Description: Infra subnet A
+    Type: 'AWS::EC2::Subnet::Id'
+    Default:
+      StackRef: {region: {Ref: 'AWS::Region'}, stackName: infra-network, paramName: subnetInfraA}
+  paramSubnetInfraB:
+    Description: Infra subnet B
+    Type: 'AWS::EC2::Subnet::Id'
+    Default:
+      StackRef: {region: {Ref: 'AWS::Region'}, stackName: infra-network, paramName: subnetInfraB}
+  paramSubnetInfraC:
+    Description: Infra subnet C
+    Type: 'AWS::EC2::Subnet::Id'
+    Default:
+      StackRef: {region: {Ref: 'AWS::Region'}, stackName: infra-network, paramName: subnetInfraC}
+  paramVPCId:
+    Description: VPC Id
+    Type: 'AWS::EC2::VPC::Id'
+    Default:
+      StackRef: {region: {Ref: 'AWS::Region'}, stackName: infra-network, paramName: VPC}
+  paramEBSTag:
+    Description: Tag for jenkins home EBS volume snapshots
+    Type: String
+    Default: serverless-work-home
+  paramEBSSize:
+    Description: Size for the jenkins home EBS volume
+    Type: String
+    Default: 32
+  paramDnsName:
+    Description: DNS name for workstation
+    Type: String
+    Default: work.serverless.rocks
+  paramEip:
+    Description: Work server EIP address
+    Type: String
+    Default: 52.51.65.252
+  paramAmi:
+    Description: AMI id for work server
+    Type: String
+    Default: ''
+  paramAmiName:
+    Description: AMI name for work server
+    Type: String
+    Default: ''
+  paramHostedZoneName:
+    Description: DNS zone for workshop
+    Type: String
+    Default: serverless.rocks.
+  paramAwsUtilsVersion:
+    Description: AWS Utils Version
+    Type: String
+    Default: 0.82
+Resources:
+  'Fn::Merge':
+  - { 'Fn::ImportYaml': ../../aws-utils/template-snippets/delete-old-snapshots.yaml }
+  - { 'Fn::ImportYaml': ../../aws-utils/template-snippets/internal-lambdarole-policy.yaml, role: resourceRole}
+  - dnsResource: {'Fn::ImportYaml': ../../aws-utils/template-snippets/route53.yaml, type: A, rec: {Ref: paramEip} }
+    resourceAsg:
+      Type: AWS::AutoScaling::AutoScalingGroup
+      Properties:
+        AvailabilityZones: [eu-west-1a, eu-west-1b, eu-west-1c]
+        Cooldown: '300'
+        DesiredCapacity: '1'
+        HealthCheckGracePeriod: '300'
+        HealthCheckType: EC2
+        MaxSize: '2'
+        MinSize: '1'
+        VPCZoneIdentifier:
+        - {Ref: paramSubnetInfraA}
+        - {Ref: paramSubnetInfraB}
+        - {Ref: paramSubnetInfraC}
+        LaunchConfigurationName: {Ref: resourceLc}
+        Tags:
+        - {Key: Name, Value: {Ref: 'AWS::StackName'}, PropagateAtLaunch: 'true'}
+        TerminationPolicies: [Default]
+      CreationPolicy:
+        ResourceSignal:
+          Count: '1'
+          Timeout: PT30M
+      UpdatePolicy:
+        AutoScalingRollingUpdate:
+          MinInstancesInService: '0'
+          MaxBatchSize: '1'
+          WaitOnResourceSignals: 'true'
+          PauseTime: PT30M
+    resourceLc:
+      Type: AWS::AutoScaling::LaunchConfiguration
+      Properties:
+        ImageId: {Ref: paramAmi}
+        InstanceType: m3.large
+        KeyName: serverless
+        IamInstanceProfile: {Ref: instanceprofileResource}
+        SpotPrice: '0.3'
+        SecurityGroups:
+        - {Ref: resourceSg}
+        BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs: {VolumeSize: 8, VolumeType: gp2}
+        - {DeviceName: /dev/xvdb, VirtualName: ephemeral0}
+        UserData:
+          Fn::Base64: {'Fn::ImportFile': userdata.sh}
+      Metadata:
+        AWS::CloudFormation::Init:
+          config:
+            files:
+              'Fn::Merge':
+              - /root/dummy.txt:
+                  content: {'Fn::ImportFile': dummy.txt}
+                  mode: '000660'
+                  owner: root
+                  group: root
+    resourceRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument: { 'Fn::ImportYaml': ../../aws-utils/template-snippets/policydoc_assumerole.yaml }
+        Path: /
+        Policies:
+        - { 'Fn::ImportYaml': ../../aws-utils/template-snippets/policy_ec2_associate_address.yaml }
+        - { 'Fn::ImportYaml': ../../aws-utils/template-snippets/policy_cloud_init.yaml }
+        - PolicyName: dataVolumeManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: dataVolumeManagement
+              Effect: Allow
+              Action: ['ec2:AttachVolume', 'ec2:CreateSnapshot',
+                'ec2:CreateTags', 'ec2:CreateVolume', 'ec2:DeleteSnapshot', 'ec2:DescribeSnapshots',
+                'ec2:DescribeTags', 'ec2:DescribeVolumeAttribute', 'ec2:DescribeVolumeStatus',
+                'ec2:DescribeVolumes', 'ec2:DetachVolume', 'ec2:ModifyInstanceAttribute']
+              Resource: ['*']
+    instanceprofileResource: { 'Fn::ImportYaml': ../../aws-utils/template-snippets/instanceprofile.yaml }
+    resourceSg:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Workstation security group
+        VpcId: {Ref: paramVPCId}
+        SecurityGroupEgress:
+        - {CidrIp: 0.0.0.0/0, FromPort: -1, IpProtocol: -1, ToPort: -1}
+        SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: '22', ToPort: '22', CidrIp: 0.0.0.0/0}
+Outputs:
+  WorkPublicIP:
+    Description: ''
+    Value: {Ref: paramEip}

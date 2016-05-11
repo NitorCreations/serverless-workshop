@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "cfn-response": "*",
-    "elasticsearch": "*",
-    "http-aws-es": "*"
-  }
-}
