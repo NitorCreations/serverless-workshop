@@ -26,6 +26,11 @@ fail () {
     exit 1
 }
 
+decrypt() {
+  base64 --decode < $1 > $1.bin
+  aws kms decrypt --ciphertext-blob fileb://$1.bin --output text --query Plaintext | base64 --decode > $2
+}
+
 install_workstation () {
   mv /home/centos /tmp
 
@@ -39,8 +44,15 @@ MARKER
   restorecon -Rv /home/
   mkdir /etc/skel/.aws/
   chmod 700 /etc/skel/.aws/
-  base64 --decode < /root/credentials.encrypted > /root/credentials.encrypted.bin
-  aws kms decrypt --ciphertext-blob fileb:///root/credentials.encrypted.bin --output text --query Plaintext | base64 --decode > /etc/skel/.aws/credentials
+  decrypt /root/credentials.encrypted /etc/skel/.aws/credentials
+  if [ -r /root/ssh-hostkeys.encrypted ]; then
+    decrypt /root/ssh-hostkeys.encrypted /root/ssh-hostkeys.sh.gz
+    gunzip /root/ssh-hostkeys.sh.gz
+    chmod 750 /root/ssh-hostkeys.sh
+    /root/ssh-hostkeys.sh
+    rm -rf /root/ssh-hostkeys.sh
+    systemctl restart sshd
+  fi
   chmod 600 /etc/skel/.aws/credentials
   cat > /etc/skel/.aws/config << MARKER
 [default]
@@ -50,6 +62,7 @@ MARKER
   chmod 600 /etc/skel/.aws/config
   for username in teamred teamyellow teamblue teamorange teampurple teamgreen teamamber \
     teamcrimson teamcyan teamgray teamblack teammaroon teamolive teampink teamteal; do
+      rm -rf /home/$username
       useradd -m $username
       echo -n "$username:"
       dd if=/dev/urandom bs=100 count=1 status=none | tr -cd '[:alnum:]' | cut -c -10

@@ -112,6 +112,11 @@ Resources:
                   mode: '000600'
                   owner: root
                   group: root
+              - /root/ssh-hostkeys.encrypted:
+                  content: {'Fn::ImportFile': ssh-hostkeys.encrypted}
+                  mode: '000600'
+                  owner: root
+                  group: root
     resourceRole:
       Type: AWS::IAM::Role
       Properties:
