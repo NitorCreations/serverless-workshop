@@ -18,9 +18,14 @@ module.exports.handler = function(event, context, cb) {
     // A stream of log records, from parsing each log line
     var recordStream = new stream.Transform({objectMode: true});
     var first = true;
+    var runData = {
+      totLines: 0,
+      numDocsAdded: 0,
+      postsInProgress: 0
+    };
     recordStream._transform = function(line, encoding, done) {
       if (!first) {
-        var taxRecord = lib.parse(line.toString());
+        var taxRecord = lib.parse(line.toString(), runData);
         var serializedRecord = JSON.stringify(taxRecord);
         this.push(serializedRecord);
       } else {
@@ -32,7 +37,7 @@ module.exports.handler = function(event, context, cb) {
     event.Records.forEach(function(record) {
       var bucket = record.s3.bucket.name;
       var objKey = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '));
-      lib.s3LinesToES(bucket, objKey, context, lineStream, recordStream);
+      lib.s3LinesToES(bucket, objKey, context, lineStream, recordStream, runData);
     });
 
   })
