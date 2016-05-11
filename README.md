@@ -32,7 +32,7 @@ Then upload the tax data to trigger ingestion to Elasticsearch: `aws s3 cp taxda
 
 ## Creating your API
 
-Think of an query you'd like to run against the tax data and implement it! Will it be simple and smooth like **querying companies by their business** id or name or would you like to see **companies paying more than a million euros in tax?**
+Think of an query you'd like to run against the tax data and implement it! Will it be simple and smooth like **querying companies by their business id or name** or would you like to see **companies paying more than a million euros in tax?**
 
 ### Write the Lambda function
 
@@ -85,7 +85,7 @@ curl -XPOST "yourESEndpointURL" -d'
 "query": {
    "range": {
      "taxDue": {
-        "gte" : 100000
+        "gte" : 1000000
      }
    }
  }
