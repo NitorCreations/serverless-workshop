@@ -37,6 +37,24 @@ MARKER
   rm -rf /home/centos
   mv /tmp/centos /home
   restorecon -Rv /home/
+  mkdir /etc/skel/.aws/
+  chmod 700 /etc/skel/.aws/
+  base64 --decode < /root/credentials.encrypted > /root/credentials.encrypted.bin
+  aws kms decrypt --ciphertext-blob fileb:///root/credentials.encrypted.bin --output text --query Plaintext | base64 --decode > /etc/skel/.aws/credentials
+  chmod 600 /etc/skel/.aws/credentials
+  cat > /etc/skel/.aws/config << MARKER
+[default]
+output = json
+region = $CF_AWS__Region
+MARKER
+  chmod 600 /etc/skel/.aws/config
+  for username in teamred teamyellow teamblue teamorange teampurple teamgreen teamamber \
+    teamcrimson teamcyan teamgray teamblack teammaroon teamolive teampink teamteal; do
+      useradd -m $username
+      echo -n "$username:"
+      dd if=/dev/urandom bs=100 count=1 status=none | tr -cd '[:alnum:]' | cut -c -10
+  done > /root/users
+  cat /root/users | chpasswd
 }
 
 set_region

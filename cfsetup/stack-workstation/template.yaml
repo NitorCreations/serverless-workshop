@@ -107,9 +107,9 @@ Resources:
           config:
             files:
               'Fn::Merge':
-              - /root/dummy.txt:
-                  content: {'Fn::ImportFile': dummy.txt}
-                  mode: '000660'
+              - /root/credentials.encrypted:
+                  content: {'Fn::ImportFile': credentials.encrypted}
+                  mode: '000600'
                   owner: root
                   group: root
     resourceRole:
@@ -131,6 +131,14 @@ Resources:
                 'ec2:DescribeTags', 'ec2:DescribeVolumeAttribute', 'ec2:DescribeVolumeStatus',
                 'ec2:DescribeVolumes', 'ec2:DetachVolume', 'ec2:ModifyInstanceAttribute']
               Resource: ['*']
+        - PolicyName: allowDecrypt
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: decryption
+              Effect: Allow
+              Action: ['kms:Decrypt']
+              Resource: { StackRef: { region: {Ref: 'AWS::Region'}, stackName: infra-network, paramName: kmsKeyArn }}
     instanceprofileResource: { 'Fn::ImportYaml': ../../aws-utils/template-snippets/instanceprofile.yaml }
     resourceSg:
       Type: AWS::EC2::SecurityGroup
