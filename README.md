@@ -93,7 +93,12 @@ curl -XPOST "yourESEndpointURL" -d'
 
 ```
 
+## Data license
+
+The open data used in this exercise is made available by the Finnish Tax Administration on their [website][verofi-avoin] under the [Creative Commons Attribution 4.0 International license][cc-by-40].
 
 [serverless]: https://github.com/serverless/serverless
 [serverless-workflow]: http://docs.serverless.com/docs/workflow
 [serverless-init]: http://docs.serverless.com/docs/project-init
+[verofi-avoin]: https://www.vero.fi/fi-FI/Avoin_data
+[cc-by-40]: http://creativecommons.org/licenses/by/4.0/deed.en
