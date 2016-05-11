@@ -17,7 +17,7 @@ own Linux/Mac(/Windows?) or use the EC2 instance we'll provide access to.
 
 ## Setting up the Serverless project and your deployment stage
 
-In the directory where you cloned this repo, run [`serverless  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
+In the directory ```serverless-workshop/slss-workshop```, run [`serverless  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
 **When prompted for a stage name, use the one provided to you or at least try not to conflict with others.**
 
 This creates an Elasticsearch domain in AWS which takes 10-15 minutes. You can continue with creating your API while this is happening. Come back here when this is done to upload your data.
@@ -26,9 +26,13 @@ More information on the development/deployment workflow with Serverless is in th
 
 ### Upload data
 
-First, after the project/stage setup has completed, deploy the data ingestion lambda function and S3 event which triggers it: `serverless dash deploy`.
+First, after the project/stage setup has completed, the ingest lambda function requires
+some dependencies to be installed. These can be installed by going into ```functions```
+subdirectory inside the serverless project and running ```npm install```.
 
-Then upload the tax data to trigger ingestion to Elasticsearch: `aws s3 cp taxdata/taxdata2014.csv s3://test-tax-bucket-yourStageName`
+Then you can deploy the data ingestion lambda function and S3 event which triggers it: ```serverless dash deploy```.
+
+Then upload the tax data to trigger ingestion to Elasticsearch: ```aws s3 cp /tmp/verot_2014.csv s3://test-tax-bucket-yourStageName```
 
 ## Creating your API
 
