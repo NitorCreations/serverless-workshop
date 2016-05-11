@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "byline": "^4.2.1",
-    "serverless-helpers-js": "^0.2.0"
+    "serverless-helpers-js": "^0.2.0",
+    "iconv-lite": "^0.4.13"
   }
 }

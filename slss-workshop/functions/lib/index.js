@@ -1,5 +1,6 @@
 var AWS = require('aws-sdk');
 var path = require('path');
+var iconv = require('iconv-lite');
 
 var s3 = new AWS.S3();
 var CONCURRENT_POSTS_LIMIT = 5;
@@ -18,9 +19,11 @@ exports.esDomain = {
 exports.s3LinesToES = function (bucket, key, context, lineStream, recordStream, runData) {
     this.createIndexIfNotExist(context);
 
+    var converterStream = iconv.decodeStream('iso-8859-15');
     var s3Stream = s3.getObject({Bucket: bucket, Key: key}).createReadStream();
     // Flow: S3 file stream -> Log Line stream -> Log Record stream -> ES
     s3Stream
+      .pipe(converterStream)
       .pipe(lineStream)
       .pipe(recordStream)
       .on('end', function () {
