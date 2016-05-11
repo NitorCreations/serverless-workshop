@@ -166,6 +166,22 @@ Resources:
     Properties:
       VpcId: {Ref: vpcInfra}
       DhcpOptionsId: {Ref: doptInfra}
+  kmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "Key for encrypting / decrypting secrets"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: key-default-2
+        Statement:
+          - Sid: "allowAdministration"
+            Effect: Allow
+            Principal:
+              AWS:
+                'Fn::Join': ["", ["arn:aws:iam::", {Ref: 'AWS::AccountId'}, ":root"]]
+            Action:
+              - "kms:*"
+            Resource: "*"
 Outputs:
   subnetInfraA:
     Description: subnet id
@@ -185,3 +201,7 @@ Outputs:
   sgSSHFromAnywhere:
     Description: SSH in security group id
     Value: {Ref: sgSSHFromAnywhere}
+  kmsKeyArn:
+    Description: KMS key id
+    Value:
+      'Fn::GetAtt': [kmsKey, Arn]
