@@ -279,7 +279,7 @@ exports.searchByName = function(context, name, cb) {
   var endpoint =  new AWS.Endpoint(this.esDomain.endpoint);
   var req = new AWS.HttpRequest(endpoint);
   req.method = 'POST';
-  req.path = path.join('/', this.esDomain.index, '_search?size=20&q=name:' + name + );
+  req.path = path.join('/', this.esDomain.index, '_search?size=20&q=name:' + name);
   req.region = this.esDomain.region;
   req.headers['presigned-expires'] = false;
   req.headers['Host'] = endpoint.host;
