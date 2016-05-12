@@ -64,10 +64,7 @@ Think of a query you'd like to run against the tax data and implement it! Will i
 First you create a new function in your serverless project by calling ```slss function create functions/search```
 Select *nodejs4.3* for runtime and *Create Endpoint* as the answer to the next question.
 Your function is now ready to deploy. Your stage will be given a random domain name -
-you can get the url to your search function like this:
-```
-echo https://$(aws apigateway get-rest-apis | jq -r .items[0].id).execute-api.eu-west-1.amazonaws.com/yourStageName/search
-```
+the url is shown at the end of the deployment output for the function.
 
 ### Configure API Gateway Endpoint
 
