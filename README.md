@@ -83,6 +83,9 @@ Also in the same file, fix the handler value like this:
 "handler": "search/handler.handler",
 ```
 
+This tells serverless to package the Lambda function so that everything in the `functions` directory is included rather than only
+the specific directory for the function.
+
 ### Implement Elasticsearch query
 
 First, you'll need some plumbing to be able to make requests to Elasticsearch. Make your Lambda hander look like this:
