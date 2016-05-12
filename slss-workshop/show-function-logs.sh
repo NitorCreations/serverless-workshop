@@ -18,8 +18,8 @@ PROJECT=$(for i in _meta/variables/s-variables-*.json; do jq -r '.|select(.proje
 STAGE=$(for i in _meta/variables/s-variables-*.json; do jq -r '.|select(.stage != null)|.stage' < $i; done)
 VERSION=$(aws lambda get-alias --function-name $PROJECT-$FUNCTION --name $STAGE  | jq -r '.FunctionVersion')
 
-if STREAM=$(aws logs describe-log-streams --log-group-name "/aws/lambda/$PROJECT-$FUNCTION" | jq -r ".logStreams[].logStreamName" | grep "$(date +%Y/%m/%d/)\[$VERSION\]"); then
-  aws logs get-log-events --log-group-name "/aws/lambda/$PROJECT-$FUNCTION" --log-stream-name $STREAM | jq -r '.events[].message' | grep -v "^$"
+if STREAMS=$(aws logs describe-log-streams --log-group-name "/aws/lambda/$PROJECT-$FUNCTION" | jq -r ".logStreams[].logStreamName" | grep "$(date +%Y/%m/%d/)\[$VERSION\]"); then
+  for STREAM in $STREAMS; do aws logs get-log-events --log-group-name "/aws/lambda/$PROJECT-$FUNCTION" --log-stream-name $STREAM | jq -r '.events[].message' | grep -v "^$"; done
 else
   echo "No stream found"
   exit 1
