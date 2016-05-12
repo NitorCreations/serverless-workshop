@@ -274,3 +274,34 @@ exports.deleteIndex = function(context) {
       context.fail();
   });
 };
+
+exports.searchByName = function(context, name, cb) {
+  var endpoint =  new AWS.Endpoint(this.esDomain.endpoint);
+  var req = new AWS.HttpRequest(endpoint);
+  req.method = 'POST';
+  req.path = path.join('/', this.esDomain.index, '_search?size=20&q=name:' + name + );
+  req.region = this.esDomain.region;
+  req.headers['presigned-expires'] = false;
+  req.headers['Host'] = endpoint.host;
+
+  // Sign the request (Sigv4)
+  var signer = new AWS.Signers.V4(req, 'es');
+  signer.addAuthorization(creds, new Date());
+
+  // Post document to ES
+  var send = new AWS.NodeHttpClient();
+  send.handleRequest(req, null, (function(httpResp) {
+    console.log("search status: " + httpResp.statusCode);
+    var body = '';
+    httpResp.on('data', function (chunk) {
+      body += chunk;
+    });
+    httpResp.on('end', function (chunk) {
+      console.log(body);
+      cb(JSON.parse(body));
+    });
+  }.bind(this)), function(err) {
+      console.log('Error checking index: ' + err);
+      context.fail();
+  });
+};

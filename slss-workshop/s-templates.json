@@ -1,0 +1,10 @@
+{
+  "searchTemplate": {
+    "application/json": {
+      "body": "$input.json('$')",
+      "pathParams" : "$input.params().path",
+      "queryParams" : "$input.params().querystring",
+      "name" : "$input.params('name')"
+    }
+  }
+}
