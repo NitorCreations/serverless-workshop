@@ -124,6 +124,8 @@ Then go ahead and implement your query! Take a look at `functions/lib/index.js` 
 
 You'll need to pass a callback function which in turn calls the `cb` function passed to the handler when done: `cb(error, result)`. See [Lambda handler documentation][lambda-handler] for details.
 
+A simple example is provided in the `example` branch in the git repo. You can [see it on GitHub][examplediff] too.
+
 ### Deployment
 
 When you're ready to test your function, run `slss dash deploy` and deploy it along with its API Gateway endpoint.
@@ -196,5 +198,6 @@ The open data used in this exercise is made available by the Finnish Tax Adminis
 [cc-by-40]: http://creativecommons.org/licenses/by/4.0/deed.en
 [lambda-handler]: http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-handler.html
 [aws-httpreq]: http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/HttpRequest.html
+[examplediff]: https://github.com/NitorCreations/serverless-workshop/compare/example?expand=1
 
 [diagram]: http://plantuml.com/plantuml/png/RPBBReCm44Nt_eeH-sIJ7OgGqeVQI9NQAgsooMPYHc25sCYFK5JrtpiO4aBQ5JRtC7Fd3h8o8OVLTWFV0a2QOsqqQG-DiGT01ycM3ywZLqQ3qdpIaX9OBZjWxiYUo5RatDmQUN1P1fCgMAkYYMMumqwltjRmX9uQR9C9L-5nd-C8liJx3MCADnBtdUyjUbaopSgKfIiI7YjqNZdf2Aqifw1Rd47OBE0ko0FvHFm8bDvO23pV649fwfskqNebLOsQkR5EeNmPzf5zKlwPZvPgamZ13MRvB1icJE73gg8Wwo17ZnneGQwBLWm9H9PS2kkeHEgFjec3z9g87bdezf52PnHuKrtI9LdQQHw3xwq9_6mqv7HIaiJWz_8TnwafUhuKT8iKFklAO0uUlswwnSMcy1x8jbVosMaMjvN2Q_1rw5SdHFyp_9S6zAiH8lvr4-A1s49x9GoT-_U_ "Deployment diagram"
