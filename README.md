@@ -28,11 +28,9 @@ git clone https://github.com/NitorCreations/serverless-workshop.git
 ```
 
 In the directory ```serverless-workshop/slss-workshop```, run [`slss  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
-**
   * When prompted for a stage name, use the username provided to you or at least try not to conflict with others.
   * Choose *Existing Profile* and then *default* for the AWS profile
   * Select the `eu-west-1` region when prompted.
-**
 
 This creates an Elasticsearch domain in AWS which takes 10-15 minutes. You can continue with creating your API while this is happening. Come back here when this is done to upload your data.
 
