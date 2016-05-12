@@ -12,13 +12,27 @@ own Linux/Mac(/Windows?) or use the EC2 instance we'll provide access to.
 - [Serverless framework][serverless]
 - AWS account, IAM user with proper [permissions](http://docs.serverless.com/docs/configuring-aws) and [AWS CLI](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)
   with the IAM user's credentials
-- Clone of this Git repository
 - A text editor
+
+The easiest way to take part is to use the provided workstation:
+```
+ssh myteam@work.serverless.rocks
+```
+using the provided username:password
 
 ## Setting up the Serverless project and your deployment stage
 
+First you will need a clone of this repository:
+```
+git clone https://github.com/NitorCreations/serverless-workshop.git
+```
+
 In the directory ```serverless-workshop/slss-workshop```, run [`slss  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
-**When prompted for a stage name, use the one provided to you or at least try not to conflict with others. Select the `eu-west-1` region when prompted.**
+**
+  * When prompted for a stage name, use the username provided to you or at least try not to conflict with others.
+  * Choose *Existing Profile* and then *default* for the AWS profile
+  * Select the `eu-west-1` region when prompted.
+**
 
 This creates an Elasticsearch domain in AWS which takes 10-15 minutes. You can continue with creating your API while this is happening. Come back here when this is done to upload your data.
 
