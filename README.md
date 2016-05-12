@@ -40,7 +40,6 @@ Here is an overview diagram of how things will be set up:
 
 ![alt text][diagram]
 
-
 ### Upload data
 
 First, after the project/stage setup has completed, the ingest lambda function requires
@@ -50,6 +49,11 @@ subdirectory inside the serverless project and running ```npm install```.
 Then you can deploy the data ingestion lambda function and S3 event which triggers it: ```slss dash deploy```.
 
 Then upload the tax data to trigger ingestion to Elasticsearch: ```aws s3 cp /tmp/verot_2014.csv s3://test-tax-bucket-yourStageName```
+
+This will now trigger the ```ingest``` function that was just deployed. You can follow the logs for the function by running
+```
+./show-function-logs.sh ingest
+```
 
 ## Creating your API
 
