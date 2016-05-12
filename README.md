@@ -18,7 +18,7 @@ own Linux/Mac(/Windows?) or use the EC2 instance we'll provide access to.
 ## Setting up the Serverless project and your deployment stage
 
 In the directory ```serverless-workshop/slss-workshop```, run [`slss  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
-**When prompted for a stage name, use the one provided to you or at least try not to conflict with others.**
+**When prompted for a stage name, use the one provided to you or at least try not to conflict with others. Select the `eu-west-1` region when prompted.**
 
 This creates an Elasticsearch domain in AWS which takes 10-15 minutes. You can continue with creating your API while this is happening. Come back here when this is done to upload your data.
 
@@ -36,9 +36,9 @@ Then upload the tax data to trigger ingestion to Elasticsearch: ```aws s3 cp /tm
 
 ## Creating your API
 
-Think of an query you'd like to run against the tax data and implement it! Will it be simple and smooth like **querying companies by their business id or name** or would you like to see **companies paying more than a million euros in tax?**
+Think of a query you'd like to run against the tax data and implement it! Will it be simple and smooth like **querying companies by their business id or name** or would you like to see **companies paying more than a million euros in tax?**
 
-### Write the Lambda function
+### Create the Lambda function skeleton
 
 First you create a new function in your serverless project by calling ```slss function create functions/search```
 Select *nodejs4.3* for runtime and *Create Endpoint* as the answer to the next question.
@@ -50,11 +50,83 @@ echo https://$(aws apigateway get-rest-apis | jq -r .items[0].id).execute-api.eu
 
 ### Configure API Gateway Endpoint
 
+You created an API Gateway endpoint skeleton using serverless. Now let's make it pass some data through to the Lambda function.
+
+Create `slss-workshop/s-templates.json` which will contain a template of event data passed to your Lambda function. For example:
+
+```
+{
+  "searchTemplate": {
+    "application/json": {
+      "body": "$input.json('$')",
+      "pathParams" : "$input.params().path",
+      "queryParams" : "$input.params().querystring",
+      "name" : "$input.params('name')"
+    }
+  }
+}
+```
+
+With the above template, the request body would be available as `event.body` and a GET parameter `name` would be available as `event.name` etc.
+
+Refer to this template in your `slss-workshop/functions/search/s-function.json` file:
+
+```
+...
+"requestTemplates": "$${searchTemplate}",
+...
+```
+
+Also in the same file, fix the handler value like this:
+
+```
+"handler": "search/handler.handler",
+```
+
+### Implement Elasticsearch query
+
+First, you'll need some plumbing to be able to make requests to Elasticsearch. Make your Lambda hander look like this:
+
+```
+'use strict';
+
+var lib = require('../lib');
+var ServerlessHelpers = require('serverless-helpers-js');
+ServerlessHelpers.loadEnv();
+
+module.exports.handler = function(event, context, cb) {
+  console.log('Received event: ', JSON.stringify(event, null, 2));
+  process.env["SERVERLESS_REGION"] = process.env.AWS_DEFAULT_REGION;
+  process.env["SERVERLESS_PROJECT_NAME"] = "slss-workshop";
+  ServerlessHelpers.CF.loadVars()
+  .then(function() {
+    lib.esDomain['endpoint'] = process.env.SERVERLESS_CF_ESDomainEndpoint;
+
+    //YOUR IMPLEMENTATION HERE
+
+  })
+  .catch(function(err) {
+    return context.done(err, null);
+  });
+};
+
+```
+
+Then go ahead and implement your query! Take a look at `functions/lib/index.js` to see how ES index creation and data ingestion are implemented.
+
+You'll need to pass a callback function which in turn calls the `cb` function passed to the handler when done: `cb(error, result)`. See [Lambda handler documentation][lambda-handler] for details.
+
 ### Deployment
+
+When you're ready to test your function, run `slss dash deploy` and deploy it along with its API Gateway endpoint.
 
 ### Test
 
-### Data schema
+Make a request in a browser. You can see the endpoint URL in the deployment output.
+
+### Reference material
+
+#### Data schema
 
 The data in Elasticsearch is in this format:
 
@@ -79,7 +151,7 @@ The data in Elasticsearch is in this format:
 }
 ```
 
-### Example Elasticsearch queries
+#### Example Elasticsearch queries
 
 Use these as a starting point to implement your query.
 
@@ -114,3 +186,5 @@ The open data used in this exercise is made available by the Finnish Tax Adminis
 [serverless-init]: http://docs.serverless.com/docs/project-init
 [verofi-avoin]: https://www.vero.fi/fi-FI/Avoin_data
 [cc-by-40]: http://creativecommons.org/licenses/by/4.0/deed.en
+[lambda-handler]: http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-handler.html
+[aws-httpreq]: http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/HttpRequest.html
