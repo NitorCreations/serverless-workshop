@@ -14,7 +14,7 @@ own Linux/Mac(/Windows?) or use the EC2 instance we'll provide access to.
   with the IAM user's credentials
 - A text editor
 
-The easiest way to take part is to use the provided workstation:
+If you're attending one of our workshops, the easiest way to take part is to use the provided workstation:
 ```
 ssh myteam@work.serverless.rocks
 ```
@@ -27,14 +27,16 @@ First you will need a clone of this repository:
 git clone https://github.com/NitorCreations/serverless-workshop.git
 ```
 
-In the directory ```serverless-workshop/slss-workshop```, run [`slss  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
+All paths mentioned below will be relative to the git repository root.
+
+In the directory ```slss-workshop```, run [`slss  project init`][serverless-init]. This will initialize the project with your own deployment stage (environment).
   * When prompted for a stage name, use the username provided to you or at least try not to conflict with others.
   * Choose *Existing Profile* and then *default* for the AWS profile
   * Select the `eu-west-1` region when prompted.
 
-This creates an Elasticsearch domain in AWS which takes 10-15 minutes. You can continue with creating your API while this is happening. Come back here when this is done to upload your data.
+This creates an Elasticsearch domain (among other things) in AWS which takes 10-15 minutes. You can continue with creating your API while this is happening. Come back here when this is done to upload your data.
 
-More information on the development/deployment workflow with Serverless is in their [documentation][serverless-workflow].
+More information on the development/deployment workflow with Serverless is in their [documentation][serverless-workflow]. It might also be helpful to read about the [Serverless project structure][serverless-structure] to understand the organization of files inside the project directory.
 
 Here is an overview diagram of how things will be set up:
 
@@ -42,11 +44,9 @@ Here is an overview diagram of how things will be set up:
 
 ### Upload data
 
-First, after the project/stage setup has completed, the ingest lambda function requires
-some dependencies to be installed. These can be installed by going into ```functions```
-subdirectory inside the serverless project and running ```npm install```.
+First, after the project/stage setup has completed, the ingest lambda function requires some dependencies to be installed. These can be installed by going into ```slss-workshop/functions``` directory and running ```npm install```.
 
-Then you can deploy the data ingestion lambda function and S3 event which triggers it: ```slss dash deploy```.
+Then you can deploy the data ingestion lambda function and S3 event which triggers it: ```slss dash deploy```. This brings up an interactive UI where you can choose what to deploy by pressing space. Choose both the ingest function and it's corresponding S3 event and then choose *Deploy*.
 
 Then upload the tax data to trigger ingestion to Elasticsearch: ```aws s3 cp /tmp/verot_2014.csv s3://test-tax-bucket-yourStageName```
 
@@ -62,6 +62,8 @@ Think of a query you'd like to run against the tax data and implement it! Will i
 ### Create the Lambda function skeleton
 
 First you create a new function in your serverless project by calling ```slss function create functions/search```
+while in the `slss-workshop` directory.
+
 Select *nodejs4.3* for runtime and *Create Endpoint* as the answer to the next question.
 Your function is now ready to deploy. Your stage will be given a random domain name -
 the url is shown at the end of the deployment output for the function. Go ahead and deploy
@@ -71,9 +73,9 @@ your function and paste the url into a browser to see the dummy output.
 
 You created an API Gateway endpoint skeleton using serverless. Now let's make it pass some data through to the Lambda function.
 
-Create `slss-workshop/s-templates.json` which will contain a template of event data passed to your Lambda function. For example:
+Create `slss-workshop/s-templates.json` which will contain a template of event data passed to your Lambda function.  For example:
 
-```
+```json
 {
   "searchTemplate": {
     "application/json": {
@@ -90,15 +92,13 @@ With the above template, the request body would be available as `event.body` and
 
 Refer to this template in your `slss-workshop/functions/search/s-function.json` file:
 
-```
-...
+```json
 "requestTemplates": "$${searchTemplate}",
-...
 ```
 
 Also in the same file, fix the handler value like this:
 
-```
+```json
 "handler": "search/handler.handler",
 ```
 
@@ -109,7 +109,7 @@ the specific directory for the function.
 
 First, you'll need some plumbing to be able to make requests to Elasticsearch. Make your Lambda hander look like this:
 
-```
+```javascript
 'use strict';
 
 var lib = require('../lib');
@@ -134,11 +134,11 @@ module.exports.handler = function(event, context, cb) {
 
 ```
 
-Then go ahead and implement your query! Take a look at `functions/lib/index.js` to see how ES index creation and data ingestion are implemented.
+Then go ahead and implement your query! Take a look at `slss-workshop/functions/lib/index.js` to see how ES index creation and data ingestion are implemented.
 
-You'll need to pass a callback function which in turn calls the `cb` function passed to the handler when done: `cb(error, result)`. See [Lambda handler documentation][lambda-handler] for details.
+You'll need to pass a callback function which in turn calls the `cb` function passed to the handler when done: `cb(error, result);`. See [Lambda handler documentation][lambda-handler] for details.
 
-A simple example is provided in the `example` branch in the git repo. You can [see it on GitHub][examplediff] too.
+**A simple example is provided** in the `example` branch in the git repo. You can [see it on GitHub][examplediff] too.
 
 ### Deployment
 
@@ -146,7 +146,7 @@ When you're ready to test your function, run `slss dash deploy` and deploy it al
 
 ### Test
 
-Make a request in a browser. You can see the endpoint URL in the deployment output.
+Make a request with curl or a browser. You can see the endpoint URL in the deployment output.
 
 ### Reference material
 
@@ -154,7 +154,7 @@ Make a request in a browser. You can see the endpoint URL in the deployment outp
 
 The data in Elasticsearch is in this format:
 
-```
+```json
 {
   "_index": "taxdata",
   "_type": "taxdata",
@@ -177,16 +177,16 @@ The data in Elasticsearch is in this format:
 
 #### Example Elasticsearch queries
 
-Use these as a starting point to implement your query.
+Use these as a starting point to implement your query. Note that these are `curl` commands and you'll need to adapt the requests for use within the Lambda function code.
 
 Search by name:
-```
+```bash
 curl -i -XGET 'yourESEndpointURL/taxdata/_search?q=name:*paja*&size=20'
 ```
 
 Companies paying more than a million, highest first:
-```
-curl -XPOST "yourESEndpointURL" -d'
+```bash
+curl -XPOST "yourESEndpointURL/taxdata/_search" -d'
 {
 "size": 20,
 "sort" : [{"taxDue" : {"order" : "desc"}}],
@@ -213,5 +213,6 @@ The open data used in this exercise is made available by the Finnish Tax Adminis
 [lambda-handler]: http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-handler.html
 [aws-httpreq]: http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/HttpRequest.html
 [examplediff]: https://github.com/NitorCreations/serverless-workshop/compare/example?expand=1
+[serverless-structure]: http://docs.serverless.com/docs/project-structure
 
 [diagram]: http://plantuml.com/plantuml/png/RP9FRvn03CNlyoaiBZqbbxsXQANqZz98bTfgM-rbByxWmWYOGMDFAAhwtMk6pR8aFJ73-s4_FyEjymD6xA51NutHYP07YOdCExveVV31DZ7qj4YhCg1jiQQ3J1r192jN6ZTOXT7v6dvXnsHi5r85zyS3_340DlH3yEG5nX1RG8RYg0SM51SyEAydRwc0kxjCt3B5PueTCT_6O5k6_HusTN1mzPWBQO-Jl__s20yeDE9KRBWE-wSAL_1BlhzYGiqhyM5sVaInZTAgR5cw8k5JXooEBHD6ssn1ths0SDZ1-sHRaiByDMWbH4Wwu1f34uRJdACuwmRqogrrQYTDUihiWvFFUemqXC8ORN1JtUpF4vRm8xgwrgeL2cgYDV6ShJa7a57Y4XwpagatsY7FiMWcMrHXtaS9iq_GLSr1DnJfv7KAlKyXwNFqKD6pisJETY_VQPgUikLBGTwLy7Fe0bOW-FjLjxpN4hudYjEL_E9qdvTLmjSaGresPypoB_mtZ6KpnkJVRaDy9BKmNGddpilxVm00 "Deployment diagram"
