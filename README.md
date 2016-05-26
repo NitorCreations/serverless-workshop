@@ -52,7 +52,7 @@ Then upload the tax data to trigger ingestion to Elasticsearch: ```aws s3 cp /tm
 
 This will now trigger the ```ingest``` function that was just deployed. You can follow the logs for the function by running
 ```
-./show-function-logs.sh ingest
+slss function logs ingest -t
 ```
 
 ## Creating your API
