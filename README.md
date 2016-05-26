@@ -107,7 +107,7 @@ the specific directory for the function.
 
 ### Implement Elasticsearch query
 
-First, you'll need some plumbing to be able to make requests to Elasticsearch. Make your Lambda hander look like this:
+First, you'll need some plumbing to be able to make requests to Elasticsearch. Make your Lambda hander `functions/search/handler.js` look like this:
 
 ```javascript
 'use strict';
